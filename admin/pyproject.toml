@@ -1,7 +1,7 @@
 [project]
 name = "cerber-admin"
 version = "0.1.0"
-description = "Cerber: внешняя админка (FastAPI) — настройки, приём клипов, S3, просмотр, live"
+description = "CerberCCTV: внешняя админка (FastAPI) — настройки, приём клипов, S3, просмотр, live"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",

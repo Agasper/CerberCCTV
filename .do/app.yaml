@@ -10,7 +10,7 @@
 # У App Platform наружу смотрит один HTTP(S)-порт с TLS от платформы —
 # этого достаточно: агент ходит по HTTPS/WSS, живое видео идёт через
 # WebSocket-ретрансляцию в самой админке.
-name: cerber
+name: cerbercctv
 region: fra
 
 services:

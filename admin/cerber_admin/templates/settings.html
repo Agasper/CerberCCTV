@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Настройки — Cerber{% endblock %}
+{% block title %}Настройки — CerberCCTV{% endblock %}
 
 {% macro tip(text) -%}
 <span class="text-secondary ms-1" style="cursor: help" tabindex="0"
@@ -236,7 +236,7 @@
         </div>
         <div class="col-sm-6 mb-3">
           <label class="form-label">Префикс ключей
-            {{ tip('Папка внутри бакета, под которой лежат файлы Cerber. Удобно, если бакет используется ещё для чего-то.') }}
+            {{ tip('Папка внутри бакета, под которой лежат файлы CerberCCTV. Удобно, если бакет используется ещё для чего-то.') }}
           </label>
           <input class="form-control" name="prefix" value="{{ cfg.s3.prefix }}">
         </div>
@@ -304,7 +304,7 @@
             <ul class="mb-0">
               <li>У Bunny Edge Storage свой API, S3-совместимый режим появился недавно и заявлен как бета —
                   endpoint и ключи смотрите в панели Bunny (Storage → FTP &amp; API Access).
-                  С Cerber не проверялось; если не заведётся — надёжные варианты выше.</li>
+                  С CerberCCTV не проверялось; если не заведётся — надёжные варианты выше.</li>
             </ul>
           </div>
         </div>

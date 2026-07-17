@@ -1,7 +1,7 @@
 [project]
 name = "cerber-agent"
 version = "0.1.0"
-description = "Cerber: агент для Raspberry Pi — захват RTSP, детекция движения, загрузка клипов"
+description = "CerberCCTV: агент для Raspberry Pi — захват RTSP, детекция движения, загрузка клипов"
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.9",

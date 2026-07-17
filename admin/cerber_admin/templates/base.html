@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Cerber{% endblock %}</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  <title>{% block title %}CerberCCTV{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
   <link rel="stylesheet" href="/static/vendor/bootstrap.min.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -12,7 +12,9 @@
 {% if not hide_nav %}
 <nav class="navbar navbar-expand-sm border-bottom mb-4 bg-body-tertiary">
   <div class="container">
-    <a class="navbar-brand" href="/">🛡️ Cerber</a>
+    <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+      <img src="/static/icon.svg" width="26" height="26" alt="">CerberCCTV
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
             aria-controls="topnav" aria-expanded="false" aria-label="Меню">
       <span class="navbar-toggler-icon"></span>

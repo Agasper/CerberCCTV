@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
         task.cancel()
 
 
-app = FastAPI(title="Cerber Admin", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(title="CerberCCTV Admin", lifespan=lifespan, docs_url=None, redoc_url=None)
 app.state.hub = AgentHub()
 app.state.livehub = LiveHub(app.state.hub)
 

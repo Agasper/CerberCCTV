@@ -1,7 +1,7 @@
 [project]
 name = "cerber-common"
 version = "0.1.0"
-description = "Cerber: общие модели API-контрактов агента и админки"
+description = "CerberCCTV: общие модели API-контрактов агента и админки"
 requires-python = ">=3.11"
 dependencies = ["pydantic>=2.5"]
 

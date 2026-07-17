@@ -1,4 +1,4 @@
-# Cerber CCTV
+# CerberCCTV
 
 Домашнее видеонаблюдение из двух частей: **агент** на Raspberry Pi читает
 RTSP-поток IP-камеры (Hikvision и любой другой с RTSP), детектит движение и

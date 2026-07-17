@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 {% set hide_nav = true %}
-{% block title %}Вход — Cerber{% endblock %}
+{% block title %}Вход — CerberCCTV{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-center" style="padding-top: 10vh">
   <form class="card p-4" style="width: 22rem" method="post" action="/login">
-    <h1 class="h4 text-center mb-3">🛡️ Cerber</h1>
+    <h1 class="h4 text-center mb-3 d-flex align-items-center justify-content-center gap-2">
+      <img src="/static/icon.svg" width="30" height="30" alt="">CerberCCTV
+    </h1>
     {% if error %}<div class="alert alert-danger py-2">{{ error }}</div>{% endif %}
     <div class="mb-3">
       <label class="form-label">Логин</label>
