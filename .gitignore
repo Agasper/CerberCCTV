@@ -7,3 +7,4 @@ venv/
 .DS_Store
 data/
 dev/out/
+deploy.sh
