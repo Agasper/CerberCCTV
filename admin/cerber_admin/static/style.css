@@ -7,6 +7,21 @@
 
 .border-dashed { border-style: dashed !important; }
 
+/* Вкладки настроек: pills в тон остальному интерфейсу */
+#settings-tabs .nav-link {
+  color: var(--bs-secondary-color);
+  padding: 0.45rem 1rem;
+}
+#settings-tabs .nav-link:hover {
+  color: var(--bs-body-color);
+  background: var(--bs-tertiary-bg);
+}
+#settings-tabs .nav-link.active {
+  color: #fff;
+  background: var(--bs-success);
+}
+#settings-tabs .nav-link:focus:not(:focus-visible) { box-shadow: none; }
+
 #zones-canvas {
   display: block;
   max-width: 860px;

@@ -32,7 +32,7 @@
   <span class="text-secondary small">версия конфигурации: {{ version }} — агент подхватывает изменения сам</span>
 </div>
 
-<ul class="nav nav-tabs" id="settings-tabs" role="tablist">
+<ul class="nav nav-pills flex-wrap gap-1 mb-3" id="settings-tabs" role="tablist">
   {% for tab_id, tab_title in [
     ('camera', 'Камера'), ('motion', 'Детекция'), ('zones', 'Зоны'),
     ('storage', 'Хранилище'), ('retention', 'Ретенция'),
@@ -46,7 +46,9 @@
   {% endfor %}
 </ul>
 
-<div class="tab-content pt-4">
+<div class="card">
+<div class="card-body p-4">
+<div class="tab-content">
 
   {# ------------------------------------------------------------ Камера #}
   <div class="tab-pane fade {{ 'show active' if active_tab == 'camera' }}" id="pane-camera" role="tabpanel">
@@ -372,6 +374,8 @@
     </form>
   </div>
 
+</div>
+</div>
 </div>
 {% endblock %}
 {% block scripts %}
