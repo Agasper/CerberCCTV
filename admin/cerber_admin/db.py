@@ -6,11 +6,20 @@ postgresql://, postgresql+asyncpg://). Параметр sslmode из URL asyncpg
   - require            — TLS без проверки сертификата (как в libpq)
   - verify-ca/full     — TLS с проверкой
 DO Managed Postgres выдаёт URL именно с sslmode=require.
+
+Подключение рассчитано на PgBouncer в transaction-режиме (пулы DO):
+именованные prepared statements живут в сессии сервера, а pgbouncer
+выдаёт сессию только на время транзакции, поэтому кэши prepared
+statements отключены на обоих уровнях (SQLAlchemy и asyncpg), а имена
+statement'ов уникальны — это рекомендация SQLAlchemy для PgBouncer.
+Работает и при прямом подключении, просто чуть медленнее на разборе
+повторяющихся запросов.
 """
 
 from __future__ import annotations
 
 import ssl
+import uuid
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -33,6 +42,12 @@ def prepare_database_url(raw: str) -> tuple[str, dict]:
         connect_args["ssl"] = ctx
     elif sslmode in ("verify-ca", "verify-full"):
         connect_args["ssl"] = ssl.create_default_context()
+
+    # PgBouncer transaction mode: без кэша prepared statements
+    # и с уникальными именами (см. docstring модуля)
+    query["prepared_statement_cache_size"] = "0"  # кэш SQLAlchemy-диалекта
+    connect_args["statement_cache_size"] = 0      # кэш asyncpg
+    connect_args["prepared_statement_name_func"] = lambda: f"__asyncpg_{uuid.uuid4()}__"
 
     url = urlunsplit((scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
     return url, connect_args
