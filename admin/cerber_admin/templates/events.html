@@ -1,33 +1,57 @@
 {% extends "base.html" %}
 {% block title %}События — Cerber{% endblock %}
 {% block content %}
-<div class="card">
-  <div class="card-head">
-    <h2>События движения</h2>
-    <form class="filter" method="get" action="/events">
-      <input type="date" name="day" value="{{ day }}">
-      <button class="btn btn-sm" type="submit">Показать</button>
-      {% if day %}<a class="btn btn-sm" href="/events">Сбросить</a>{% endif %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form id="events-filter" method="get" action="/events" class="row g-2 align-items-end">
+      <div class="col-6 col-md-auto">
+        <label class="form-label small text-secondary mb-1" for="filter-from">С</label>
+        <input type="datetime-local" class="form-control" id="filter-from">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small text-secondary mb-1" for="filter-to">По</label>
+        <input type="datetime-local" class="form-control" id="filter-to">
+      </div>
+      <input type="hidden" name="from" id="filter-from-utc" value="{{ from_utc }}">
+      <input type="hidden" name="to" id="filter-to-utc" value="{{ to_utc }}">
+      <div class="col-auto">
+        <button type="submit" class="btn btn-success">Показать</button>
+        {% if from_utc or to_utc %}
+        <a class="btn btn-outline-secondary" href="/events">Сбросить</a>
+        {% endif %}
+      </div>
+      <div class="col-auto ms-md-auto">
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-outline-secondary" data-preset="today">Сегодня</button>
+          <button type="button" class="btn btn-outline-secondary" data-preset="24h">24 часа</button>
+          <button type="button" class="btn btn-outline-secondary" data-preset="7d">7 дней</button>
+        </div>
+      </div>
     </form>
   </div>
-
-  {% if events %}
-  <div class="events-grid">
-    {% for e in events %}
-      {% include "_event_card.html" %}
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="placeholder">За выбранный период событий нет.</div>
-  {% endif %}
-
-  <div class="pager">
-    {% if page > 1 %}
-      <a class="btn btn-sm" href="/events?page={{ page - 1 }}{% if day %}&day={{ day }}{% endif %}">← Новее</a>
-    {% endif %}
-    {% if has_next %}
-      <a class="btn btn-sm" href="/events?page={{ page + 1 }}{% if day %}&day={{ day }}{% endif %}">Старее →</a>
-    {% endif %}
-  </div>
 </div>
+
+{% if events %}
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3">
+  {% for e in events %}
+  <div class="col">{% include "_event_card.html" %}</div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-secondary text-center py-5">За выбранный период событий нет.</div>
+{% endif %}
+
+{% if page > 1 or has_next %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center">
+    <li class="page-item {{ 'disabled' if page <= 1 }}">
+      <a class="page-link" href="/events?page={{ page - 1 }}{{ filter_qs }}">← Новее</a>
+    </li>
+    <li class="page-item disabled"><span class="page-link">стр. {{ page }}</span></li>
+    <li class="page-item {{ 'disabled' if not has_next }}">
+      <a class="page-link" href="/events?page={{ page + 1 }}{{ filter_qs }}">Старее →</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
 {% endblock %}

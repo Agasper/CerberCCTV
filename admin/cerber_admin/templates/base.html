@@ -1,28 +1,38 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-bs-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Cerber{% endblock %}</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  <link rel="stylesheet" href="/static/vendor/bootstrap.min.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body{% block body_attrs %}{% endblock %}>
 {% if not hide_nav %}
-<header class="topbar">
-  <a class="brand" href="/">🛡️ Cerber</a>
-  <nav>
-    <a href="/" class="{{ 'active' if active == 'dashboard' }}">Дашборд</a>
-    <a href="/events" class="{{ 'active' if active == 'events' }}">События</a>
-    <a href="/live" class="{{ 'active' if active == 'live' }}">Live</a>
-    <a href="/settings" class="{{ 'active' if active == 'settings' }}">Настройки</a>
-    <a href="/logout" class="muted">Выйти</a>
-  </nav>
-</header>
+<nav class="navbar navbar-expand-sm border-bottom mb-4 bg-body-tertiary">
+  <div class="container">
+    <a class="navbar-brand" href="/">🛡️ Cerber</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
+            aria-controls="topnav" aria-expanded="false" aria-label="Меню">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="topnav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link {{ 'active' if active == 'dashboard' }}" href="/">Дашборд</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if active == 'events' }}" href="/events">События</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if active == 'live' }}" href="/live">Live</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if active == 'settings' }}" href="/settings">Настройки</a></li>
+      </ul>
+      <a class="nav-link text-secondary" href="/logout">Выйти</a>
+    </div>
+  </div>
+</nav>
 {% endif %}
-<main>
+<main class="container pb-5">
 {% block content %}{% endblock %}
 </main>
+<script src="/static/vendor/bootstrap.bundle.min.js"></script>
 <script src="/static/app.js"></script>
 {% block scripts %}{% endblock %}
 </body>

@@ -14,9 +14,11 @@
   let queue = [];
   let closedByUser = false;
 
+  const badgeClass = { ok: 'text-bg-success', warn: 'text-bg-warning', err: 'text-bg-danger' };
+
   function setStatus(text, kind) {
     statusEl.textContent = text;
-    statusEl.className = 'badge badge-' + (kind || 'warn');
+    statusEl.className = 'badge ' + (badgeClass[kind] || badgeClass.warn);
   }
 
   function msClass() {

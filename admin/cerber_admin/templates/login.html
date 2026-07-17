@@ -2,17 +2,19 @@
 {% set hide_nav = true %}
 {% block title %}Вход — Cerber{% endblock %}
 {% block content %}
-<div class="login-wrap">
-  <form class="card login-card" method="post" action="/login">
-    <h1>🛡️ Cerber</h1>
-    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
-    <label>Логин
-      <input name="username" autocomplete="username" autofocus required>
-    </label>
-    <label>Пароль
-      <input type="password" name="password" autocomplete="current-password" required>
-    </label>
-    <button type="submit" class="btn btn-primary">Войти</button>
+<div class="d-flex justify-content-center" style="padding-top: 10vh">
+  <form class="card p-4" style="width: 22rem" method="post" action="/login">
+    <h1 class="h4 text-center mb-3">🛡️ Cerber</h1>
+    {% if error %}<div class="alert alert-danger py-2">{{ error }}</div>{% endif %}
+    <div class="mb-3">
+      <label class="form-label">Логин</label>
+      <input class="form-control" name="username" autocomplete="username" autofocus required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Пароль</label>
+      <input type="password" class="form-control" name="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn btn-success w-100">Войти</button>
   </form>
 </div>
 {% endblock %}

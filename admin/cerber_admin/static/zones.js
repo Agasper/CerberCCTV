@@ -19,6 +19,7 @@
 
   function resize() {
     const w = Math.min(canvas.parentElement.clientWidth - 2, 860);
+    if (w <= 0) return; // вкладка скрыта — пересчитаем при её открытии
     const ratio = imgOk ? img.naturalHeight / img.naturalWidth : 9 / 16;
     canvas.width = w;
     canvas.height = Math.round(w * ratio);

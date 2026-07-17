@@ -1,153 +1,377 @@
 {% extends "base.html" %}
 {% block title %}Настройки — Cerber{% endblock %}
+
+{% macro tip(text) -%}
+<span class="text-secondary ms-1" style="cursor: help" tabindex="0"
+      data-bs-toggle="tooltip" data-bs-title="{{ text }}">ⓘ</span>
+{%- endmacro %}
+
+{% set active_tab = active_tab or 'camera' %}
+
 {% block content %}
-{% if msg %}<div class="alert alert-ok">{{ msg }}</div>{% endif %}
-{% if err %}<div class="alert alert-error">{{ err }}</div>{% endif %}
-{% if new_token %}
-<div class="alert alert-warn token-box">
-  Новый токен агента (задайте его в <code>.env</code> агента как <code>AGENT_TOKEN</code>):
-  <code class="token">{{ new_token }}</code>
+{% if msg %}
+<div class="alert alert-success alert-dismissible py-2">{{ msg }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
-<div class="muted small" style="margin-bottom:1rem">Версия конфигурации: {{ version }} — агент подхватывает изменения автоматически.</div>
+{% if err %}
+<div class="alert alert-danger alert-dismissible py-2">{{ err }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+{% if new_token %}
+<div class="alert alert-warning">
+  Новый токен агента — скопируйте сейчас, больше он не показывается.
+  Задайте его на Raspberry Pi в <code>agent/.env</code> как <code>AGENT_TOKEN</code> и перезапустите агента.
+  <code class="d-block user-select-all bg-body p-2 rounded mt-2">{{ new_token }}</code>
+</div>
+{% endif %}
 
-<div class="grid-2">
-  <form class="card" method="post" action="/settings/camera">
-    <h2>Камера</h2>
-    <label>RTSP основной поток (запись)
-      <input name="rtsp_main" value="{{ cfg.agent.camera.rtsp_main }}"
-             placeholder="rtsp://admin:пароль@192.168.0.10:554/Streaming/Channels/101">
-    </label>
-    <label>RTSP субпоток (детекция движения)
-      <input name="rtsp_sub" value="{{ cfg.agent.camera.rtsp_sub }}"
-             placeholder="rtsp://admin:пароль@192.168.0.10:554/Streaming/Channels/102">
-    </label>
-    <label>Интервал снапшотов, сек
-      <input type="number" name="snapshot_interval_s" min="5" max="3600"
-             value="{{ cfg.agent.camera.snapshot_interval_s }}">
-    </label>
-    <button class="btn btn-primary" type="submit">Сохранить</button>
-  </form>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 m-0">Настройки</h1>
+  <span class="text-secondary small">версия конфигурации: {{ version }} — агент подхватывает изменения сам</span>
+</div>
 
-  <form class="card" method="post" action="/settings/motion">
-    <h2>Детекция движения</h2>
-    <label class="checkbox">
-      <input type="checkbox" name="enabled" {{ 'checked' if cfg.agent.motion.enabled }}> Включена
-    </label>
-    <div class="grid-fields">
-      <label>Анализ, кадров/с
-        <input type="number" step="0.5" min="0.5" max="15" name="process_fps" value="{{ cfg.agent.motion.process_fps }}">
-      </label>
-      <label>Чувствительность (меньше — чувствительнее)
-        <input type="number" min="4" max="200" name="sensitivity" value="{{ cfg.agent.motion.sensitivity }}">
-      </label>
-      <label>Мин. площадь движения, % кадра
-        <input type="number" step="0.05" min="0.01" max="50" name="min_area_pct" value="{{ cfg.agent.motion.min_area_pct }}">
-      </label>
-      <label>Кадров подряд для старта
-        <input type="number" min="1" max="50" name="min_consecutive_frames" value="{{ cfg.agent.motion.min_consecutive_frames }}">
-      </label>
-      <label>Пре-ролл, сек
-        <input type="number" min="0" max="60" name="pre_roll_s" value="{{ cfg.agent.motion.pre_roll_s }}">
-      </label>
-      <label>Пост-ролл, сек
-        <input type="number" min="1" max="120" name="post_roll_s" value="{{ cfg.agent.motion.post_roll_s }}">
-      </label>
-      <label>Пауза между событиями, сек
-        <input type="number" min="0" max="600" name="cooldown_s" value="{{ cfg.agent.motion.cooldown_s }}">
-      </label>
-      <label>Макс. длина клипа, сек
-        <input type="number" min="10" max="900" name="max_clip_s" value="{{ cfg.agent.motion.max_clip_s }}">
-      </label>
+<ul class="nav nav-tabs" id="settings-tabs" role="tablist">
+  {% for tab_id, tab_title in [
+    ('camera', 'Камера'), ('motion', 'Детекция'), ('zones', 'Зоны'),
+    ('storage', 'Хранилище'), ('retention', 'Ретенция'),
+    ('agent', 'Агент'), ('security', 'Безопасность')] %}
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {{ 'active' if active_tab == tab_id }}" id="tab-{{ tab_id }}"
+            data-bs-toggle="tab" data-bs-target="#pane-{{ tab_id }}" type="button" role="tab">
+      {{ tab_title }}
+    </button>
+  </li>
+  {% endfor %}
+</ul>
+
+<div class="tab-content pt-4">
+
+  {# ------------------------------------------------------------ Камера #}
+  <div class="tab-pane fade {{ 'show active' if active_tab == 'camera' }}" id="pane-camera" role="tabpanel">
+    <form method="post" action="/settings/camera" class="col-lg-8">
+      <div class="mb-3">
+        <label class="form-label">RTSP основной поток (запись)
+          {{ tip('Поток высокого разрешения — из него собираются клипы и live. Кодек лучше H.264: его играет любой браузер.') }}
+        </label>
+        <input class="form-control font-monospace" name="rtsp_main" value="{{ cfg.agent.camera.rtsp_main }}"
+               placeholder="rtsp://admin:пароль@192.168.0.10:554/Streaming/Channels/101">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">RTSP субпоток (детекция движения)
+          {{ tip('Поток низкого разрешения (например 640×480, 5–10 к/с) — его непрерывно анализирует детектор. Чем меньше разрешение, тем меньше нагрузка на Raspberry Pi.') }}
+        </label>
+        <input class="form-control font-monospace" name="rtsp_sub" value="{{ cfg.agent.camera.rtsp_sub }}"
+               placeholder="rtsp://admin:пароль@192.168.0.10:554/Streaming/Channels/102">
+      </div>
+      <div class="mb-3 col-sm-5">
+        <label class="form-label">Интервал снапшотов, сек
+          {{ tip('Как часто агент отправляет кадр с камеры на дашборд. Это «почти живая» картинка без затрат на постоянную трансляцию.') }}
+        </label>
+        <input type="number" class="form-control" name="snapshot_interval_s" min="5" max="3600"
+               value="{{ cfg.agent.camera.snapshot_interval_s }}">
+      </div>
+      <button class="btn btn-success" type="submit">Сохранить</button>
+    </form>
+
+    <div class="accordion col-lg-8 mt-4" id="rtsp-help">
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rtsp-help-body">
+            Что такое RTSP и где взять адрес потока
+          </button>
+        </h2>
+        <div id="rtsp-help-body" class="accordion-collapse collapse" data-bs-parent="#rtsp-help">
+          <div class="accordion-body small">
+            <p>RTSP — протокол, по которому IP-камеры отдают видео. Агент подключается к камере
+            по локальной сети и читает поток напрямую, ничего не устанавливая на камеру.</p>
+            <p class="mb-1">Адрес собирается так:</p>
+            <p><code>rtsp://логин:пароль@IP-камеры:554/путь</code></p>
+            <ul class="mb-2">
+              <li><b>логин/пароль</b> — учётка от веб-интерфейса камеры;</li>
+              <li><b>554</b> — стандартный порт RTSP (обычно менять не нужно);</li>
+              <li><b>путь</b> зависит от производителя. Hikvision: <code>/Streaming/Channels/101</code> —
+                  основной поток, <code>/Streaming/Channels/102</code> — субпоток.
+                  Dahua: <code>/cam/realmonitor?channel=1&amp;subtype=0</code> (subtype=1 — субпоток).</li>
+            </ul>
+            <p>Спецсимволы в пароле нужно закодировать: <code>@</code> → <code>%40</code>,
+               <code>:</code> → <code>%3A</code>, <code>/</code> → <code>%2F</code>,
+               <code>%</code> → <code>%25</code>. Например, пароль <code>a@b@</code>
+               в адресе выглядит как <code>a%40b%40</code>.</p>
+            <p>Субпоток включается в настройках камеры (у Hikvision: Video/Audio → Stream Type →
+               Sub-stream); рекомендуемые параметры — 640×480 @ 5–10 к/с, H.264.</p>
+            <p class="mb-0">Проверить адрес можно в VLC: Медиа → Открыть URL — если поток играет там,
+               заработает и здесь.</p>
+          </div>
+        </div>
+      </div>
     </div>
-    <button class="btn btn-primary" type="submit">Сохранить</button>
-  </form>
+  </div>
 
-  <div class="card zones-card">
-    <h2>Зоны детекции</h2>
-    <p class="muted small" style="margin-top:0">
+  {# ---------------------------------------------------------- Детекция #}
+  <div class="tab-pane fade {{ 'show active' if active_tab == 'motion' }}" id="pane-motion" role="tabpanel">
+    <form method="post" action="/settings/motion" class="col-lg-8">
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="motion-enabled" name="enabled"
+               {{ 'checked' if cfg.agent.motion.enabled }}>
+        <label class="form-check-label" for="motion-enabled">Детекция включена</label>
+      </div>
+      <div class="row">
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Анализ, кадров/с
+            {{ tip('Сколько кадров субпотока в секунду анализировать. Больше — быстрее реакция, но выше нагрузка на CPU. Для дома достаточно 5.') }}
+          </label>
+          <input type="number" class="form-control" step="0.5" min="0.5" max="15" name="process_fps"
+                 value="{{ cfg.agent.motion.process_fps }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Чувствительность
+            {{ tip('Порог отличия пикселя от фона (MOG2 varThreshold). МЕНЬШЕ значение — чувствительнее: заметит и слабое движение, но возможны ложные срабатывания от шума и теней. Разумный диапазон 16–50.') }}
+          </label>
+          <input type="number" class="form-control" min="4" max="200" name="sensitivity"
+                 value="{{ cfg.agent.motion.sensitivity }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Мин. площадь движения, %
+            {{ tip('Сколько процентов кадра (или зон детекции, если они заданы) должно «двигаться», чтобы кадр считался движением. Отсекает мелочь: птицу вдалеке, блик. Человек в кадре — обычно 1–10%.') }}
+          </label>
+          <input type="number" class="form-control" step="0.05" min="0.01" max="50" name="min_area_pct"
+                 value="{{ cfg.agent.motion.min_area_pct }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Кадров подряд для старта
+            {{ tip('Сколько «двигающихся» кадров подряд нужно, чтобы началось событие. Защита от одиночных всплесков: помехи, мигнувший свет. При 5 кадрах/с значение 3 — это ~0.6 секунды непрерывного движения.') }}
+          </label>
+          <input type="number" class="form-control" min="1" max="50" name="min_consecutive_frames"
+                 value="{{ cfg.agent.motion.min_consecutive_frames }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Пре-ролл, сек
+            {{ tip('Сколько секунд ДО начала движения попадёт в клип. Агент всё время держит последние минуты записи в буфере, поэтому видно, как объект входит в кадр, а не только когда он уже в центре.') }}
+          </label>
+          <input type="number" class="form-control" min="0" max="60" name="pre_roll_s"
+                 value="{{ cfg.agent.motion.pre_roll_s }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Пост-ролл, сек
+            {{ tip('Сколько секунд записывать ПОСЛЕ того, как движение прекратилось. Если движение возобновится в течение пост-ролла — событие продолжится, а не разорвётся на два клипа.') }}
+          </label>
+          <input type="number" class="form-control" min="1" max="120" name="post_roll_s"
+                 value="{{ cfg.agent.motion.post_roll_s }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Пауза между событиями, сек
+            {{ tip('Cooldown: после окончания события новое не начнётся, пока не пройдёт эта пауза. Защита от лавины клипов при постоянном движении в кадре.') }}
+          </label>
+          <input type="number" class="form-control" min="0" max="600" name="cooldown_s"
+                 value="{{ cfg.agent.motion.cooldown_s }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Макс. длина клипа, сек
+            {{ tip('Событие принудительно завершается по достижении этой длины, даже если движение продолжается. Ограничивает размер файла и время загрузки в хранилище.') }}
+          </label>
+          <input type="number" class="form-control" min="10" max="900" name="max_clip_s"
+                 value="{{ cfg.agent.motion.max_clip_s }}">
+        </div>
+      </div>
+      <button class="btn btn-success" type="submit">Сохранить</button>
+    </form>
+  </div>
+
+  {# -------------------------------------------------------------- Зоны #}
+  <div class="tab-pane fade {{ 'show active' if active_tab == 'zones' }}" id="pane-zones" role="tabpanel">
+    <p class="text-secondary small">
       Обведите мышью области, где нужно искать движение: клик добавляет точку,
-      «Замкнуть зону» завершает полигон. Без зон анализируется весь кадр.
-      Порог «мин. площадь движения» считается от площади зон.
+      «Замкнуть зону» завершает полигон. Зон может быть несколько. Без зон
+      анализируется весь кадр. Порог «мин. площадь движения» считается от площади зон.
     </p>
     <canvas id="zones-canvas" title="Клик — добавить точку зоны"></canvas>
-    <div class="btn-row" style="margin-top:0.8rem">
-      <button type="button" class="btn" id="zone-finish">Замкнуть зону</button>
-      <button type="button" class="btn" id="zone-undo">Отменить точку</button>
-      <button type="button" class="btn btn-danger" id="zone-clear">Очистить всё</button>
-      <form method="post" action="/settings/zones" id="zones-form">
+    <div class="d-flex gap-2 flex-wrap mt-3">
+      <button type="button" class="btn btn-outline-secondary" id="zone-finish">Замкнуть зону</button>
+      <button type="button" class="btn btn-outline-secondary" id="zone-undo">Отменить точку</button>
+      <button type="button" class="btn btn-outline-danger" id="zone-clear">Очистить всё</button>
+      <form method="post" action="/settings/zones" id="zones-form" class="m-0">
         <input type="hidden" name="zones" id="zones-input">
-        <button class="btn btn-primary" type="submit">Сохранить зоны</button>
+        <button class="btn btn-success" type="submit">Сохранить зоны</button>
       </form>
     </div>
   </div>
 
-  <form class="card" method="post" action="/settings/storage">
-    <h2>S3-хранилище</h2>
-    <label>Endpoint URL (пусто — AWS S3)
-      <input name="endpoint_url" value="{{ cfg.s3.endpoint_url }}"
-             placeholder="https://fra1.digitaloceanspaces.com">
-    </label>
-    <label>Публичный URL для ссылок (если отличается)
-      <input name="public_url" value="{{ cfg.s3.public_url }}" placeholder="обычно пусто">
-    </label>
-    <div class="grid-fields">
-      <label>Регион <input name="region" value="{{ cfg.s3.region }}" placeholder="fra1"></label>
-      <label>Bucket <input name="bucket" value="{{ cfg.s3.bucket }}"></label>
-      <label>Access key <input name="access_key" value="{{ cfg.s3.access_key }}"></label>
-      <label>Secret key
-        <input type="password" name="secret_key" value=""
-               placeholder="{{ 'сохранён — пусто = не менять' if cfg.s3.secret_key else 'не задан' }}">
-      </label>
-      <label>Префикс ключей <input name="prefix" value="{{ cfg.s3.prefix }}"></label>
-      <label>TTL ссылок, сек
-        <input type="number" min="60" max="604800" name="presign_ttl_s" value="{{ cfg.s3.presign_ttl_s }}">
-      </label>
-    </div>
-    <label class="checkbox">
-      <input type="checkbox" name="force_path_style" {{ 'checked' if cfg.s3.force_path_style }}>
-      Path-style адресация (нужно для MinIO)
-    </label>
-    <div class="btn-row">
-      <button class="btn btn-primary" type="submit">Сохранить</button>
-      <button class="btn" type="submit" formaction="/settings/s3-test">Проверить подключение</button>
-    </div>
-  </form>
+  {# --------------------------------------------------------- Хранилище #}
+  <div class="tab-pane fade {{ 'show active' if active_tab == 'storage' }}" id="pane-storage" role="tabpanel">
+    <form method="post" action="/settings/storage" class="col-lg-8">
+      <div class="mb-3">
+        <label class="form-label">Endpoint URL
+          {{ tip('Адрес S3-совместимого API. Для Amazon S3 оставьте пустым, для остальных провайдеров — из примеров ниже.') }}
+        </label>
+        <input class="form-control font-monospace" name="endpoint_url" value="{{ cfg.s3.endpoint_url }}"
+               placeholder="https://fra1.digitaloceanspaces.com">
+      </div>
+      <div class="row">
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Регион
+            {{ tip('Регион хранилища, участвует в подписи запросов. Например fra1 (DO), eu-central-1 (AWS).') }}
+          </label>
+          <input class="form-control" name="region" value="{{ cfg.s3.region }}" placeholder="fra1">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Bucket
+            {{ tip('Имя бакета (контейнера), куда складываются клипы и превью. Создайте его заранее в панели провайдера.') }}
+          </label>
+          <input class="form-control" name="bucket" value="{{ cfg.s3.bucket }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Access key</label>
+          <input class="form-control font-monospace" name="access_key" value="{{ cfg.s3.access_key }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Secret key
+            {{ tip('Показывается только при вводе. Пустое поле при сохранении — оставить прежний ключ.') }}
+          </label>
+          <input type="password" class="form-control font-monospace" name="secret_key" value=""
+                 placeholder="{{ 'сохранён — пусто = не менять' if cfg.s3.secret_key else 'не задан' }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">Префикс ключей
+            {{ tip('Папка внутри бакета, под которой лежат файлы Cerber. Удобно, если бакет используется ещё для чего-то.') }}
+          </label>
+          <input class="form-control" name="prefix" value="{{ cfg.s3.prefix }}">
+        </div>
+        <div class="col-sm-6 mb-3">
+          <label class="form-label">TTL ссылок, сек
+            {{ tip('Срок жизни подписанных ссылок на просмотр видео. После истечения страницу достаточно обновить — ссылка выпишется заново.') }}
+          </label>
+          <input type="number" class="form-control" min="60" max="604800" name="presign_ttl_s"
+                 value="{{ cfg.s3.presign_ttl_s }}">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Публичный URL для ссылок
+          {{ tip('Нужен, только если из браузера хранилище доступно по другому адресу, чем с сервера (например, MinIO в docker-сети). Обычно — пусто.') }}
+        </label>
+        <input class="form-control font-monospace" name="public_url" value="{{ cfg.s3.public_url }}"
+               placeholder="обычно пусто">
+      </div>
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="s3-path-style" name="force_path_style"
+               {{ 'checked' if cfg.s3.force_path_style }}>
+        <label class="form-check-label" for="s3-path-style">Path-style адресация
+          {{ tip('Адрес вида endpoint/bucket/key вместо bucket.endpoint/key. Нужно для MinIO и некоторых self-hosted хранилищ.') }}
+        </label>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-success" type="submit">Сохранить</button>
+        <button class="btn btn-outline-secondary" type="submit" formaction="/settings/s3-test">Проверить подключение</button>
+      </div>
+    </form>
 
-  <form class="card" method="post" action="/settings/retention">
-    <h2>Хранение записей</h2>
-    <label class="checkbox">
-      <input type="checkbox" name="enabled" {{ 'checked' if cfg.retention.enabled }}>
-      Автоматически удалять старые события
-    </label>
-    <label>Хранить, дней
-      <input type="number" min="1" max="3650" name="days" value="{{ cfg.retention.days }}">
-    </label>
-    <button class="btn btn-primary" type="submit">Сохранить</button>
-  </form>
-
-  <div class="card">
-    <h2>Агент</h2>
-    {% if agent %}
-    <div class="kv">
-      <div>Имя</div><div>{{ agent.name }}</div>
-      <div>Был на связи</div><div>{{ agent.last_seen | dt }}</div>
-      <div>Токен</div><div>{{ 'выпущен' if agent.token_hash else 'не выпущен' }}</div>
+    <div class="accordion col-lg-8 mt-4" id="s3-examples">
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#s3-examples-body">
+            Примеры настройки: DigitalOcean, Amazon, Google, Backblaze, Bunny
+          </button>
+        </h2>
+        <div id="s3-examples-body" class="accordion-collapse collapse" data-bs-parent="#s3-examples">
+          <div class="accordion-body small">
+            <h6>DigitalOcean Spaces</h6>
+            <ul>
+              <li>Endpoint: <code>https://fra1.digitaloceanspaces.com</code> (замените fra1 на регион вашего Space)</li>
+              <li>Регион: <code>fra1</code>; Path-style: выключен</li>
+              <li>Ключи: панель DO → API → Spaces Keys</li>
+            </ul>
+            <h6>Amazon S3</h6>
+            <ul>
+              <li>Endpoint: пусто; Регион: регион бакета, например <code>eu-central-1</code>; Path-style: выключен</li>
+              <li>Ключи: IAM-пользователь с правами на бакет (GetObject, PutObject, DeleteObject,
+                  ListBucket, AbortMultipartUpload)</li>
+            </ul>
+            <h6>Google Cloud Storage</h6>
+            <ul>
+              <li>Endpoint: <code>https://storage.googleapis.com</code>; Регион: регион бакета; Path-style: включён</li>
+              <li>Ключи: HMAC-ключи в Cloud Storage → Settings → Interoperability</li>
+            </ul>
+            <h6>Backblaze B2</h6>
+            <ul>
+              <li>Endpoint: <code>https://s3.eu-central-003.backblazeb2.com</code> (точный адрес — в свойствах бакета)</li>
+              <li>Регион: из endpoint, например <code>eu-central-003</code>; Path-style: выключен</li>
+              <li>Ключи: App Keys (мастер-ключ не работает с S3 API)</li>
+            </ul>
+            <h6>Bunny</h6>
+            <ul class="mb-0">
+              <li>У Bunny Edge Storage свой API, S3-совместимый режим появился недавно и заявлен как бета —
+                  endpoint и ключи смотрите в панели Bunny (Storage → FTP &amp; API Access).
+                  С Cerber не проверялось; если не заведётся — надёжные варианты выше.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
-    {% endif %}
-    <form method="post" action="/settings/agent-token"
-          data-confirm="Перевыпустить токен? Старый перестанет работать, его нужно будет обновить на Raspberry Pi.">
-      <button class="btn" type="submit">Перевыпустить токен агента</button>
+  </div>
+
+  {# ---------------------------------------------------------- Ретенция #}
+  <div class="tab-pane fade {{ 'show active' if active_tab == 'retention' }}" id="pane-retention" role="tabpanel">
+    <form method="post" action="/settings/retention" class="col-lg-5">
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="ret-enabled" name="enabled"
+               {{ 'checked' if cfg.retention.enabled }}>
+        <label class="form-check-label" for="ret-enabled">Автоматически удалять старые события
+          {{ tip('Раз в час события старше срока хранения удаляются из хранилища и из базы — навсегда.') }}
+        </label>
+      </div>
+      <div class="mb-3 col-sm-6">
+        <label class="form-label">Хранить, дней</label>
+        <input type="number" class="form-control" min="1" max="3650" name="days" value="{{ cfg.retention.days }}">
+      </div>
+      <button class="btn btn-success" type="submit">Сохранить</button>
     </form>
   </div>
 
-  <form class="card" method="post" action="/settings/password" id="password-form">
-    <h2>Смена пароля</h2>
-    <label>Текущий пароль <input type="password" name="current_password" autocomplete="current-password" required></label>
-    <label>Новый пароль <input type="password" name="new_password" autocomplete="new-password" required minlength="8"></label>
-    <label>Ещё раз <input type="password" name="confirm_password" autocomplete="new-password" required minlength="8"></label>
-    <button class="btn btn-primary" type="submit">Сменить пароль</button>
-  </form>
+  {# ------------------------------------------------------------- Агент #}
+  <div class="tab-pane fade {{ 'show active' if active_tab == 'agent' }}" id="pane-agent" role="tabpanel">
+    <div class="col-lg-6">
+      {% if agent %}
+      <table class="table table-sm mb-3">
+        <tbody>
+          <tr><td class="text-secondary">Имя</td><td>{{ agent.name }}</td></tr>
+          <tr><td class="text-secondary">Был на связи</td><td>{{ agent.last_seen | dt }}</td></tr>
+          <tr><td class="text-secondary">Токен</td><td>{{ 'выпущен' if agent.token_hash else 'не выпущен' }}</td></tr>
+        </tbody>
+      </table>
+      {% endif %}
+      <form method="post" action="/settings/agent-token"
+            data-confirm="Перевыпустить токен? Старый перестанет работать, новый нужно будет прописать на Raspberry Pi.">
+        <button class="btn btn-outline-warning" type="submit">Перевыпустить токен агента</button>
+      </form>
+      <p class="text-secondary small mt-3 mb-0">
+        Токен — пароль, по которому агент на Raspberry Pi подключается к этой админке.
+        Он показывается один раз при выпуске; здесь хранится только его хэш.
+        На Pi токен задаётся в <code>agent/.env</code> (переменная <code>AGENT_TOKEN</code>),
+        после смены агента нужно перезапустить: <code>docker compose up -d</code>.
+      </p>
+    </div>
+  </div>
+
+  {# ------------------------------------------------------- Безопасность #}
+  <div class="tab-pane fade {{ 'show active' if active_tab == 'security' }}" id="pane-security" role="tabpanel">
+    <form method="post" action="/settings/password" class="col-lg-4">
+      <div class="mb-3">
+        <label class="form-label">Текущий пароль</label>
+        <input type="password" class="form-control" name="current_password" autocomplete="current-password" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Новый пароль</label>
+        <input type="password" class="form-control" name="new_password" autocomplete="new-password" required minlength="8">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Ещё раз</label>
+        <input type="password" class="form-control" name="confirm_password" autocomplete="new-password" required minlength="8">
+      </div>
+      <button class="btn btn-success" type="submit">Сменить пароль</button>
+    </form>
+  </div>
+
 </div>
 {% endblock %}
 {% block scripts %}

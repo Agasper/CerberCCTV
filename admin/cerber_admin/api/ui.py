@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, timezone
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import RedirectResponse, Response
@@ -138,26 +139,37 @@ async def snapshot(request: Request, user: User = Depends(require_user)):
 # -------------------------------------------------------------------- events
 
 
+def _parse_iso_utc(value: str | None) -> datetime | None:
+    """ISO-строка (браузер шлёт UTC вида 2026-07-17T18:00:00.000Z) -> aware UTC."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
 @router.get("/events")
 async def events_page(
     request: Request,
-    day: str | None = None,
     page: int = 1,
     user: User = Depends(require_user),
     session: AsyncSession = Depends(get_session),
 ):
+    from_raw = request.query_params.get("from", "")
+    to_raw = request.query_params.get("to", "")
+    from_dt = _parse_iso_utc(from_raw)
+    to_dt = _parse_iso_utc(to_raw)
+
     query = select(Event).order_by(desc(Event.started_at))
-    selected_day: date | None = None
-    if day:
-        try:
-            selected_day = date.fromisoformat(day)
-        except ValueError:
-            selected_day = None
-    if selected_day:
-        start = datetime.combine(selected_day, time.min).astimezone()
-        query = query.where(
-            Event.started_at >= start, Event.started_at < start + timedelta(days=1)
-        )
+    if from_dt:
+        query = query.where(Event.started_at >= from_dt)
+    if to_dt:
+        query = query.where(Event.started_at <= to_dt)
+
     page = max(page, 1)
     rows = (
         (await session.execute(query.limit(PAGE_SIZE + 1).offset((page - 1) * PAGE_SIZE)))
@@ -165,6 +177,13 @@ async def events_page(
         .all()
     )
     has_next = len(rows) > PAGE_SIZE
+
+    filter_qs = ""
+    if from_dt:
+        filter_qs += f"&from={quote(from_raw)}"
+    if to_dt:
+        filter_qs += f"&to={quote(to_raw)}"
+
     return templates.TemplateResponse(
         request,
         "events.html",
@@ -172,7 +191,9 @@ async def events_page(
             "events": rows[:PAGE_SIZE],
             "page": page,
             "has_next": has_next,
-            "day": selected_day.isoformat() if selected_day else "",
+            "from_utc": from_raw if from_dt else "",
+            "to_utc": to_raw if to_dt else "",
+            "filter_qs": filter_qs,
             "active": "events",
         },
     )
@@ -288,6 +309,7 @@ async def _render_settings(
     err: str | None = None,
     new_token: str | None = None,
     status_code: int = 200,
+    active_tab: str = "camera",
 ):
     cfg, version = await load_config(session)
     agent = (await session.execute(select(Agent).order_by(Agent.id))).scalars().first()
@@ -302,6 +324,7 @@ async def _render_settings(
             "err": err,
             "new_token": new_token,
             "active": "settings",
+            "active_tab": active_tab,
         },
         status_code=status_code,
     )
@@ -342,8 +365,8 @@ async def settings_camera(
 
         await _save_agent_section(request, session, update)
     except (ValidationError, ValueError) as exc:
-        return await _render_settings(request, session, err=f"Камера: {exc}", status_code=400)
-    return _redirect("/settings?msg=Настройки камеры сохранены")
+        return await _render_settings(request, session, err=f"Камера: {exc}", status_code=400, active_tab="camera")
+    return _redirect("/settings?msg=Настройки камеры сохранены#camera")
 
 
 @router.post("/settings/motion")
@@ -368,8 +391,8 @@ async def settings_motion(
 
         await _save_agent_section(request, session, update)
     except (ValidationError, ValueError) as exc:
-        return await _render_settings(request, session, err=f"Движение: {exc}", status_code=400)
-    return _redirect("/settings?msg=Настройки детекции сохранены")
+        return await _render_settings(request, session, err=f"Движение: {exc}", status_code=400, active_tab="motion")
+    return _redirect("/settings?msg=Настройки детекции сохранены#motion")
 
 
 @router.post("/settings/zones")
@@ -396,10 +419,10 @@ async def settings_zones(
 
         await _save_agent_section(request, session, update)
     except (ValidationError, ValueError, TypeError) as exc:
-        return await _render_settings(request, session, err=f"Зоны: {exc}", status_code=400)
+        return await _render_settings(request, session, err=f"Зоны: {exc}", status_code=400, active_tab="zones")
     if zones:
-        return _redirect(f"/settings?msg=Сохранено зон: {len(zones)} — движение ищется только внутри них")
-    return _redirect("/settings?msg=Зоны очищены — движение ищется по всему кадру")
+        return _redirect(f"/settings?msg=Сохранено зон: {len(zones)} — движение ищется только внутри них#zones")
+    return _redirect("/settings?msg=Зоны очищены — движение ищется по всему кадру#zones")
 
 
 @router.post("/settings/storage")
@@ -425,9 +448,9 @@ async def settings_storage(
             presign_ttl_s=int(form.get("presign_ttl_s", 3600)),
         )
     except (ValidationError, ValueError) as exc:
-        return await _render_settings(request, session, err=f"S3: {exc}", status_code=400)
+        return await _render_settings(request, session, err=f"S3: {exc}", status_code=400, active_tab="storage")
     await save_config(session, cfg)
-    return _redirect("/settings?msg=Настройки S3 сохранены")
+    return _redirect("/settings?msg=Настройки S3 сохранены#storage")
 
 
 @router.post("/settings/s3-test")
@@ -438,12 +461,12 @@ async def settings_s3_test(
 ):
     cfg, version = await load_config(session)
     if not cfg.s3.configured:
-        return await _render_settings(request, session, err="S3: заполните bucket и ключи", status_code=400)
+        return await _render_settings(request, session, err="S3: заполните bucket и ключи", status_code=400, active_tab="storage")
     try:
         await S3Service(cfg.s3).check()
     except Exception as exc:  # noqa: BLE001 — показываем причину пользователю
-        return await _render_settings(request, session, err=f"S3 недоступен: {exc}", status_code=400)
-    return _redirect("/settings?msg=S3 доступен, запись и удаление работают")
+        return await _render_settings(request, session, err=f"S3 недоступен: {exc}", status_code=400, active_tab="storage")
+    return _redirect("/settings?msg=S3 доступен, запись и удаление работают#storage")
 
 
 @router.post("/settings/retention")
@@ -460,9 +483,9 @@ async def settings_retention(
             days=int(form.get("days", cfg.retention.days)),
         )
     except (ValidationError, ValueError) as exc:
-        return await _render_settings(request, session, err=f"Ретенция: {exc}", status_code=400)
+        return await _render_settings(request, session, err=f"Ретенция: {exc}", status_code=400, active_tab="retention")
     await save_config(session, cfg)
-    return _redirect("/settings?msg=Настройки хранения сохранены")
+    return _redirect("/settings?msg=Настройки хранения сохранены#retention")
 
 
 @router.post("/settings/password")
@@ -476,15 +499,15 @@ async def settings_password(
     new = str(form.get("new_password", ""))
     confirm = str(form.get("confirm_password", ""))
     if not verify_password(current, user.password_hash):
-        return await _render_settings(request, session, err="Текущий пароль неверен", status_code=400)
+        return await _render_settings(request, session, err="Текущий пароль неверен", status_code=400, active_tab="security")
     if len(new) < 8:
-        return await _render_settings(request, session, err="Новый пароль короче 8 символов", status_code=400)
+        return await _render_settings(request, session, err="Новый пароль короче 8 символов", status_code=400, active_tab="security")
     if new != confirm:
-        return await _render_settings(request, session, err="Пароли не совпадают", status_code=400)
+        return await _render_settings(request, session, err="Пароли не совпадают", status_code=400, active_tab="security")
     row = await session.get(User, user.id)
     row.password_hash = hash_password(new)
     await session.commit()
-    return _redirect("/settings?msg=Пароль изменён")
+    return _redirect("/settings?msg=Пароль изменён#security")
 
 
 @router.post("/settings/agent-token")
@@ -505,4 +528,5 @@ async def settings_agent_token(
         session,
         msg="Токен перевыпущен — скопируйте его сейчас, больше он не показывается",
         new_token=token,
+        active_tab="agent",
     )

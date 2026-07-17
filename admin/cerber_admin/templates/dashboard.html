@@ -3,65 +3,78 @@
 {% block body_attrs %} data-page="dashboard"{% endblock %}
 {% block content %}
 {% for hint in hints %}
-<div class="alert alert-warn">{{ hint }}</div>
+<div class="alert alert-warning py-2">{{ hint }}</div>
 {% endfor %}
 
-<div class="grid-2">
-  <div class="card">
-    <div class="card-head">
-      <h2>Камера</h2>
-      <a class="btn btn-primary btn-sm" href="/live">▶ Live</a>
-    </div>
-    {% if has_snapshot %}
-      <img id="snapshot" class="snapshot" src="/snapshot.jpg" alt="Последний снапшот камеры">
-      <div class="muted small">Снапшот обновляется автоматически.</div>
-    {% else %}
-      <div class="placeholder">Снапшотов пока нет — агент пришлёт первый кадр после подключения.</div>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h2>Агент</h2>
-    {% if agent %}
-      <div class="kv">
-        <div>Имя</div><div>{{ agent.name }}</div>
-        <div>Статус</div>
-        <div>
-          {% if online %}<span class="badge badge-ok">онлайн</span>
-          {% else %}<span class="badge badge-err">офлайн</span>{% endif %}
-        </div>
-        <div>Был на связи</div><div>{{ agent.last_seen | dt }}</div>
-        {% if agent.status %}
-        <div>Захват потока</div>
-        <div>{{ '✅ работает' if agent.status.capture_ok else '⚠️ нет данных' }}</div>
-        <div>Детекция</div>
-        <div>{{ '✅ работает (%.1f fps)' % agent.status.motion_fps if agent.status.motion_ok else '⚠️ не работает' }}</div>
-        <div>Очередь загрузки</div>
-        <div>{{ agent.status.outbox_events }} соб. ({{ agent.status.outbox_bytes | filesize }})</div>
-        <div>Свободно на диске</div><div>{{ agent.status.disk_free_mb }} МБ</div>
-        <div>Последнее движение</div><div>{{ agent.status.last_motion_at | dt }}</div>
-        <div>Версия конфига</div><div>{{ agent.status.config_version }}</div>
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Камера</span>
+        <a class="btn btn-success btn-sm" href="/live">▶ Live</a>
+      </div>
+      <div class="card-body">
+        {% if has_snapshot %}
+          <img id="snapshot" class="img-fluid rounded w-100" src="/snapshot.jpg" alt="Последний снапшот камеры">
+          <div class="text-secondary small mt-2">Снапшот обновляется автоматически.</div>
+        {% else %}
+          <div class="text-secondary text-center py-5 border rounded border-dashed">
+            Снапшотов пока нет — агент пришлёт первый кадр после подключения.
+          </div>
         {% endif %}
       </div>
-    {% else %}
-      <div class="placeholder">Агент ещё не зарегистрирован.</div>
-    {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header">Агент</div>
+      <div class="card-body">
+        {% if agent %}
+        <table class="table table-sm mb-0 align-middle">
+          <tbody>
+            <tr><td class="text-secondary">Имя</td><td>{{ agent.name }}</td></tr>
+            <tr><td class="text-secondary">Статус</td><td>
+              {% if online %}<span class="badge text-bg-success">онлайн</span>
+              {% else %}<span class="badge text-bg-danger">офлайн</span>{% endif %}
+            </td></tr>
+            <tr><td class="text-secondary">Был на связи</td><td>{{ agent.last_seen | dt }}</td></tr>
+            {% if agent.status %}
+            <tr><td class="text-secondary">Захват потока</td>
+                <td>{{ '✅ работает' if agent.status.capture_ok else '⚠️ нет данных' }}</td></tr>
+            <tr><td class="text-secondary">Детекция</td>
+                <td>{{ '✅ работает (%.1f fps)' % agent.status.motion_fps if agent.status.motion_ok else '⚠️ не работает' }}</td></tr>
+            <tr><td class="text-secondary">Очередь загрузки</td>
+                <td>{{ agent.status.outbox_events }} соб. ({{ agent.status.outbox_bytes | filesize }})</td></tr>
+            <tr><td class="text-secondary">Свободно на диске</td><td>{{ agent.status.disk_free_mb }} МБ</td></tr>
+            <tr><td class="text-secondary">Последнее движение</td><td>{{ agent.status.last_motion_at | dt }}</td></tr>
+            <tr><td class="text-secondary">Версия конфига</td><td>{{ agent.status.config_version }}</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-secondary">Агент ещё не зарегистрирован.</div>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
 
 <div class="card">
-  <div class="card-head">
-    <h2>Последние события</h2>
-    <a class="btn btn-sm" href="/events">Все события</a>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Последние события</span>
+    <a class="btn btn-outline-secondary btn-sm" href="/events">Все события</a>
   </div>
-  {% if recent %}
-  <div class="events-grid">
-    {% for e in recent %}
-      {% include "_event_card.html" %}
-    {% endfor %}
+  <div class="card-body">
+    {% if recent %}
+    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3">
+      {% for e in recent %}
+      <div class="col">{% include "_event_card.html" %}</div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-secondary text-center py-4">Событий пока нет.</div>
+    {% endif %}
   </div>
-  {% else %}
-  <div class="placeholder">Событий пока нет.</div>
-  {% endif %}
 </div>
 {% endblock %}

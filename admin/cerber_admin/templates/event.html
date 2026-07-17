@@ -2,33 +2,36 @@
 {% block title %}Событие {{ event.started_at | dt_plain }} — Cerber{% endblock %}
 {% block content %}
 <div class="card">
-  <div class="card-head">
-    <h2>Событие · {{ event.started_at | dt }}</h2>
-    <a class="btn btn-sm" href="/events">← К списку</a>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Событие · {{ event.started_at | dt }}</span>
+    <a class="btn btn-outline-secondary btn-sm" href="/events">← К списку</a>
   </div>
+  <div class="card-body">
+    {% if event.status == 'stored' %}
+      <video class="w-100 rounded bg-black" style="aspect-ratio: 16/9" controls autoplay playsinline
+             src="/events/{{ event.id }}/video"
+             {% if event.s3_key_thumb %}poster="/events/{{ event.id }}/thumb"{% endif %}></video>
+    {% elif event.status == 'uploading' %}
+      <div class="alert alert-warning">
+        Видео ещё загружается с агента ({{ event.bytes_received | filesize }} из {{ event.size_bytes | filesize }}).
+      </div>
+    {% else %}
+      <div class="alert alert-danger">Загрузка этого события не удалась.</div>
+    {% endif %}
 
-  {% if event.status == 'stored' %}
-    <video class="player" controls autoplay playsinline
-           src="/events/{{ event.id }}/video"
-           {% if event.s3_key_thumb %}poster="/events/{{ event.id }}/thumb"{% endif %}></video>
-  {% elif event.status == 'uploading' %}
-    <div class="placeholder">Видео ещё загружается с агента ({{ event.bytes_received | filesize }} из {{ event.size_bytes | filesize }}).</div>
-  {% else %}
-    <div class="alert alert-error">Загрузка этого события не удалась.</div>
-  {% endif %}
+    <dl class="row mt-3 mb-0 small">
+      <dt class="col-sm-3 text-secondary fw-normal">Начало</dt><dd class="col-sm-9">{{ event.started_at | dt }}</dd>
+      <dt class="col-sm-3 text-secondary fw-normal">Конец</dt><dd class="col-sm-9">{{ event.ended_at | dt }}</dd>
+      <dt class="col-sm-3 text-secondary fw-normal">Длительность</dt><dd class="col-sm-9">{{ event.duration_s | duration }}</dd>
+      <dt class="col-sm-3 text-secondary fw-normal">Размер</dt><dd class="col-sm-9">{{ event.size_bytes | filesize }}</dd>
+      <dt class="col-sm-3 text-secondary fw-normal">Оценка движения</dt><dd class="col-sm-9">{{ '%.1f' % event.motion_score }}</dd>
+      <dt class="col-sm-3 text-secondary fw-normal">Статус</dt><dd class="col-sm-9">{{ event.status }}</dd>
+    </dl>
 
-  <div class="kv" style="margin-top:1rem">
-    <div>Начало</div><div>{{ event.started_at | dt }}</div>
-    <div>Конец</div><div>{{ event.ended_at | dt }}</div>
-    <div>Длительность</div><div>{{ event.duration_s | duration }}</div>
-    <div>Размер</div><div>{{ event.size_bytes | filesize }}</div>
-    <div>Оценка движения</div><div>{{ '%.1f' % event.motion_score }}</div>
-    <div>Статус</div><div>{{ event.status }}</div>
+    <form method="post" action="/events/{{ event.id }}/delete" class="mt-3"
+          data-confirm="Удалить событие и видео из хранилища?">
+      <button class="btn btn-outline-danger" type="submit">Удалить событие</button>
+    </form>
   </div>
-
-  <form method="post" action="/events/{{ event.id }}/delete" style="margin-top:1rem"
-        data-confirm="Удалить событие и видео из хранилища?">
-    <button class="btn btn-danger" type="submit">Удалить событие</button>
-  </form>
 </div>
 {% endblock %}
