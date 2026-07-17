@@ -103,6 +103,9 @@ class MotionDetector:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         last_processed = 0.0
         fps_window: list[float] = []
+        zone_key: tuple | None = None
+        zone_mask: np.ndarray | None = None
+        zone_area: int | None = None
 
         while not self._stop.is_set():
             cfg = self.store.config
@@ -125,7 +128,13 @@ class MotionDetector:
             if not ok or frame is None:
                 continue
 
-            score, mask = self._detect(frame, subtractor, kernel)
+            # Маска зон пересобирается при смене конфига или размера кадра
+            key = (repr(cfg.motion.zones), frame.shape[:2])
+            if key != zone_key:
+                zone_key = key
+                zone_mask, zone_area = self._build_zone_mask(cfg.motion.zones, frame.shape)
+
+            score, mask = self._detect(frame, subtractor, kernel, zone_mask, zone_area)
             active = bool(cfg.motion.enabled and score >= cfg.motion.min_area_pct)
             if active:
                 self.last_motion_at = now
@@ -147,15 +156,44 @@ class MotionDetector:
         )
 
     @staticmethod
-    def _detect(frame: np.ndarray, subtractor, kernel) -> tuple[float, np.ndarray]:
+    def _build_zone_mask(
+        zones: list, shape: tuple
+    ) -> tuple[np.ndarray | None, int | None]:
+        """Полигоны (0..1) -> бинарная маска в пикселях кадра + её площадь."""
+        if not zones:
+            return None, None
+        h, w = shape[:2]
+        mask = np.zeros((h, w), dtype=np.uint8)
+        for poly in zones:
+            if len(poly) < 3:
+                continue
+            pts = np.array([[int(x * w), int(y * h)] for x, y in poly], dtype=np.int32)
+            cv2.fillPoly(mask, [pts], 255)
+        area = int(np.count_nonzero(mask))
+        if area == 0:
+            return None, None
+        return mask, area
+
+    @staticmethod
+    def _detect(
+        frame: np.ndarray,
+        subtractor,
+        kernel,
+        zone_mask: np.ndarray | None = None,
+        zone_area: int | None = None,
+    ) -> tuple[float, np.ndarray]:
         mask = subtractor.apply(frame)
         # Тени у MOG2 = 127, движение = 255: порог 200 отсекает тени
         _, mask = cv2.threshold(mask, 200, 255, cv2.THRESH_BINARY)
+        if zone_mask is not None:
+            # Движение вне зон детекции игнорируется
+            mask = cv2.bitwise_and(mask, zone_mask)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         mask = cv2.dilate(mask, kernel, iterations=2)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         area = sum(cv2.contourArea(c) for c in contours)
-        score = area / float(frame.shape[0] * frame.shape[1]) * 100.0
+        denom = zone_area if zone_area else frame.shape[0] * frame.shape[1]
+        score = area / float(denom) * 100.0
         return round(score, 3), mask
 
     def _encode_if_needed(self, frame: np.ndarray, now: float, active: bool) -> bytes | None:

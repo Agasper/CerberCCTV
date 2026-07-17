@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -369,6 +370,36 @@ async def settings_motion(
     except (ValidationError, ValueError) as exc:
         return await _render_settings(request, session, err=f"Движение: {exc}", status_code=400)
     return _redirect("/settings?msg=Настройки детекции сохранены")
+
+
+@router.post("/settings/zones")
+async def settings_zones(
+    request: Request,
+    user: User = Depends(require_user),
+    session: AsyncSession = Depends(get_session),
+):
+    form = await request.form()
+    try:
+        parsed = json.loads(str(form.get("zones", "[]")))
+        if not isinstance(parsed, list) or len(parsed) > 20:
+            raise ValueError("не больше 20 зон")
+        zones = []
+        for poly in parsed:
+            if not isinstance(poly, list) or not 3 <= len(poly) <= 100:
+                raise ValueError("полигон — от 3 до 100 точек")
+            zones.append(
+                [(min(max(float(x), 0.0), 1.0), min(max(float(y), 0.0), 1.0)) for x, y in poly]
+            )
+
+        def update(cfg):
+            cfg.agent.motion.zones = zones
+
+        await _save_agent_section(request, session, update)
+    except (ValidationError, ValueError, TypeError) as exc:
+        return await _render_settings(request, session, err=f"Зоны: {exc}", status_code=400)
+    if zones:
+        return _redirect(f"/settings?msg=Сохранено зон: {len(zones)} — движение ищется только внутри них")
+    return _redirect("/settings?msg=Зоны очищены — движение ищется по всему кадру")
 
 
 @router.post("/settings/storage")

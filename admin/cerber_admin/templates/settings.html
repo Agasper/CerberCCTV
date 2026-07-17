@@ -63,6 +63,25 @@
     <button class="btn btn-primary" type="submit">Сохранить</button>
   </form>
 
+  <div class="card zones-card">
+    <h2>Зоны детекции</h2>
+    <p class="muted small" style="margin-top:0">
+      Обведите мышью области, где нужно искать движение: клик добавляет точку,
+      «Замкнуть зону» завершает полигон. Без зон анализируется весь кадр.
+      Порог «мин. площадь движения» считается от площади зон.
+    </p>
+    <canvas id="zones-canvas" title="Клик — добавить точку зоны"></canvas>
+    <div class="btn-row" style="margin-top:0.8rem">
+      <button type="button" class="btn" id="zone-finish">Замкнуть зону</button>
+      <button type="button" class="btn" id="zone-undo">Отменить точку</button>
+      <button type="button" class="btn btn-danger" id="zone-clear">Очистить всё</button>
+      <form method="post" action="/settings/zones" id="zones-form">
+        <input type="hidden" name="zones" id="zones-input">
+        <button class="btn btn-primary" type="submit">Сохранить зоны</button>
+      </form>
+    </div>
+  </div>
+
   <form class="card" method="post" action="/settings/storage">
     <h2>S3-хранилище</h2>
     <label>Endpoint URL (пусто — AWS S3)
@@ -122,7 +141,7 @@
     </form>
   </div>
 
-  <form class="card" method="post" action="/settings/password">
+  <form class="card" method="post" action="/settings/password" id="password-form">
     <h2>Смена пароля</h2>
     <label>Текущий пароль <input type="password" name="current_password" autocomplete="current-password" required></label>
     <label>Новый пароль <input type="password" name="new_password" autocomplete="new-password" required minlength="8"></label>
@@ -130,4 +149,8 @@
     <button class="btn btn-primary" type="submit">Сменить пароль</button>
   </form>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>window.CERBER_ZONES = {{ cfg.agent.motion.zones | tojson }};</script>
+<script src="/static/zones.js"></script>
 {% endblock %}

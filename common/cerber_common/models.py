@@ -48,6 +48,10 @@ class MotionConfig(BaseModel):
     post_roll_s: int = Field(default=5, ge=1, le=120)
     cooldown_s: int = Field(default=10, ge=0, le=600)
     max_clip_s: int = Field(default=120, ge=10, le=900)
+    # Зоны детекции: полигоны в нормированных координатах кадра (0..1).
+    # Пустой список — анализируется весь кадр. Площадь движения (min_area_pct)
+    # считается от площади зон, а не всего кадра.
+    zones: list[list[tuple[float, float]]] = Field(default_factory=list)
 
 
 class BufferConfig(BaseModel):

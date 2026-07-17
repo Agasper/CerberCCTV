@@ -1,13 +1,21 @@
-<a class="event-card" href="/events/{{ e.id }}">
-  {% if e.s3_key_thumb %}
-    <img loading="lazy" src="/events/{{ e.id }}/thumb" alt="Превью события">
-  {% else %}
-    <div class="event-thumb-placeholder">нет превью</div>
-  {% endif %}
+<div class="event-card">
+  <a class="event-link" href="/events/{{ e.id }}">
+    {% if e.s3_key_thumb %}
+      <img loading="lazy" src="/events/{{ e.id }}/thumb" alt="Превью события">
+    {% else %}
+      <div class="event-thumb-placeholder">нет превью</div>
+    {% endif %}
+  </a>
   <div class="event-meta">
-    <span>{{ e.started_at | dt }}</span>
+    <div class="event-meta-top">
+      <a href="/events/{{ e.id }}">{{ e.started_at | dt }}</a>
+      <form method="post" action="/events/{{ e.id }}/delete" class="event-del"
+            data-confirm="Удалить событие и видео из хранилища?">
+        <button type="submit" title="Удалить событие">✕</button>
+      </form>
+    </div>
     <span class="muted">{{ e.duration_s | duration }} · {{ e.size_bytes | filesize }}</span>
     {% if e.status == 'uploading' %}<span class="badge badge-warn">загружается</span>
     {% elif e.status == 'failed' %}<span class="badge badge-err">ошибка</span>{% endif %}
   </div>
-</a>
+</div>

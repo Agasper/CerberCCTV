@@ -39,7 +39,7 @@
         <div>Очередь загрузки</div>
         <div>{{ agent.status.outbox_events }} соб. ({{ agent.status.outbox_bytes | filesize }})</div>
         <div>Свободно на диске</div><div>{{ agent.status.disk_free_mb }} МБ</div>
-        <div>Последнее движение</div><div>{{ agent.status.last_motion_at | default('—', true) }}</div>
+        <div>Последнее движение</div><div>{{ agent.status.last_motion_at | dt }}</div>
         <div>Версия конфига</div><div>{{ agent.status.config_version }}</div>
         {% endif %}
       </div>

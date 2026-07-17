@@ -176,6 +176,26 @@ label.checkbox { display: flex; align-items: center; gap: 0.5rem; color: var(--t
 }
 .event-card:hover { border-color: var(--accent-2); }
 .event-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #000; }
+.event-link { display: block; color: var(--text); }
+.event-meta a { color: var(--text); }
+.event-meta a:hover { color: var(--accent); }
+.event-meta-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+}
+.event-del button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 6px;
+  line-height: 1;
+}
+.event-del button:hover { color: #fff; background: var(--danger); }
 .event-thumb-placeholder {
   aspect-ratio: 16/9;
   display: flex;
@@ -211,6 +231,17 @@ label.checkbox { display: flex; align-items: center; gap: 0.5rem; color: var(--t
 
 .muted { color: var(--muted); }
 .small { font-size: 0.83rem; margin-top: 0.5rem; }
+
+.zones-card { grid-column: 1 / -1; }
+#zones-canvas {
+  display: block;
+  border-radius: 8px;
+  background: #000;
+  cursor: crosshair;
+  border: 1px solid var(--border);
+}
+.zones-card .btn-row { align-items: center; }
+.zones-card form { display: inline; }
 
 .token-box .token {
   display: block;
