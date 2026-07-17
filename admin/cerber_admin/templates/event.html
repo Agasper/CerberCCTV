@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Событие {{ event.started_at | dt }} — Cerber{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <h2>Событие · {{ event.started_at | dt }}</h2>
+    <a class="btn btn-sm" href="/events">← К списку</a>
+  </div>
+
+  {% if event.status == 'stored' %}
+    <video class="player" controls autoplay playsinline
+           src="/events/{{ event.id }}/video"
+           {% if event.s3_key_thumb %}poster="/events/{{ event.id }}/thumb"{% endif %}></video>
+  {% elif event.status == 'uploading' %}
+    <div class="placeholder">Видео ещё загружается с агента ({{ event.bytes_received | filesize }} из {{ event.size_bytes | filesize }}).</div>
+  {% else %}
+    <div class="alert alert-error">Загрузка этого события не удалась.</div>
+  {% endif %}
+
+  <div class="kv" style="margin-top:1rem">
+    <div>Начало</div><div>{{ event.started_at | dt }}</div>
+    <div>Конец</div><div>{{ event.ended_at | dt }}</div>
+    <div>Длительность</div><div>{{ event.duration_s | duration }}</div>
+    <div>Размер</div><div>{{ event.size_bytes | filesize }}</div>
+    <div>Оценка движения</div><div>{{ '%.1f' % event.motion_score }}</div>
+    <div>Статус</div><div>{{ event.status }}</div>
+  </div>
+
+  <form method="post" action="/events/{{ event.id }}/delete" style="margin-top:1rem"
+        data-confirm="Удалить событие и видео из хранилища?">
+    <button class="btn btn-danger" type="submit">Удалить событие</button>
+  </form>
+</div>
+{% endblock %}

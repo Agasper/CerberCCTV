@@ -1,0 +1,50 @@
+# App Spec для DigitalOcean App Platform.
+#
+# Деплой:
+#   1. Запушьте репозиторий на GitHub и поправьте github.repo ниже.
+#   2. doctl apps create --spec .do/app.yaml
+#      (или через UI: Create App -> импорт из репозитория, спека подхватится)
+#   3. Задайте секреты DATABASE_URL, SECRET_KEY, ADMIN_PASSWORD, AGENT_TOKEN
+#      в настройках приложения (или заполните value ниже перед созданием).
+#
+# У App Platform наружу смотрит один HTTP(S)-порт с TLS от платформы —
+# этого достаточно: агент ходит по HTTPS/WSS, живое видео идёт через
+# WebSocket-ретрансляцию в самой админке.
+name: cerber
+region: fra
+
+services:
+  - name: admin
+    dockerfile_path: admin/Dockerfile
+    source_dir: /
+    github:
+      repo: Agasper/CerberCCTV
+      branch: main
+      deploy_on_push: true
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /healthz
+      initial_delay_seconds: 20
+    envs:
+      # Строка подключения к вашему Postgres
+      # (для managed-БД DO — вида postgresql://...?sslmode=require)
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+      # Любая длинная случайная строка — подпись сессионных cookie
+      - key: SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: ADMIN_USERNAME
+        scope: RUN_TIME
+        value: admin
+      # Пароль первого входа (используется только при пустой БД)
+      - key: ADMIN_PASSWORD
+        scope: RUN_TIME
+        type: SECRET
+      # Токен агента; можно не задавать и выпустить из UI после входа
+      - key: AGENT_TOKEN
+        scope: RUN_TIME
+        type: SECRET

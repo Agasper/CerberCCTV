@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% set hide_nav = true %}
+{% block title %}Вход — Cerber{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <form class="card login-card" method="post" action="/login">
+    <h1>🛡️ Cerber</h1>
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+    <label>Логин
+      <input name="username" autocomplete="username" autofocus required>
+    </label>
+    <label>Пароль
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <button type="submit" class="btn btn-primary">Войти</button>
+  </form>
+</div>
+{% endblock %}

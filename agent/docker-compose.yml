@@ -1,0 +1,20 @@
+# Запуск агента на Raspberry Pi:
+#   cp .env.example .env   # заполнить ADMIN_URL и AGENT_TOKEN
+#   docker compose up -d --build
+services:
+  agent:
+    build:
+      context: ..
+      dockerfile: agent/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - agent-data:/data
+    # Кольцевой буфер держим в tmpfs, чтобы не изнашивать SD-карту.
+    # 512 МБ хватает на ~5 минут потока 8 Мбит/с; при большем битрейте
+    # или буфере — увеличьте.
+    tmpfs:
+      - /data/buffer:size=512m
+
+volumes:
+  agent-data:

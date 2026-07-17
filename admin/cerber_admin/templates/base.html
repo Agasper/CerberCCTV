@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Cerber{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body{% block body_attrs %}{% endblock %}>
+{% if not hide_nav %}
+<header class="topbar">
+  <a class="brand" href="/">🛡️ Cerber</a>
+  <nav>
+    <a href="/" class="{{ 'active' if active == 'dashboard' }}">Дашборд</a>
+    <a href="/events" class="{{ 'active' if active == 'events' }}">События</a>
+    <a href="/live" class="{{ 'active' if active == 'live' }}">Live</a>
+    <a href="/settings" class="{{ 'active' if active == 'settings' }}">Настройки</a>
+    <a href="/logout" class="muted">Выйти</a>
+  </nav>
+</header>
+{% endif %}
+<main>
+{% block content %}{% endblock %}
+</main>
+<script src="/static/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

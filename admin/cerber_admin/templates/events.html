@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}События — Cerber{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <h2>События движения</h2>
+    <form class="filter" method="get" action="/events">
+      <input type="date" name="day" value="{{ day }}">
+      <button class="btn btn-sm" type="submit">Показать</button>
+      {% if day %}<a class="btn btn-sm" href="/events">Сбросить</a>{% endif %}
+    </form>
+  </div>
+
+  {% if events %}
+  <div class="events-grid">
+    {% for e in events %}
+      {% include "_event_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="placeholder">За выбранный период событий нет.</div>
+  {% endif %}
+
+  <div class="pager">
+    {% if page > 1 %}
+      <a class="btn btn-sm" href="/events?page={{ page - 1 }}{% if day %}&day={{ day }}{% endif %}">← Новее</a>
+    {% endif %}
+    {% if has_next %}
+      <a class="btn btn-sm" href="/events?page={{ page + 1 }}{% if day %}&day={{ day }}{% endif %}">Старее →</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

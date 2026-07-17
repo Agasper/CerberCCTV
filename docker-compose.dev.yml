@@ -1,0 +1,118 @@
+# Локальная e2e-среда: полный контур без железа и облака.
+#
+#   docker compose -f docker-compose.dev.yml up -d --build
+#
+# Поднимает: Postgres, MinIO (локальный S3), MediaMTX + два ffmpeg,
+# изображающие камеру Hikvision (main/sub RTSP c движущейся картинкой),
+# админку и агента. Админка: http://localhost:8090 (admin / admin123).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cerber
+      POSTGRES_PASSWORD: cerber
+      POSTGRES_DB: cerber
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cerber"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - dev-pg:/var/lib/postgresql/data
+
+  minio:
+    image: quay.io/minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: cerber
+      MINIO_ROOT_PASSWORD: cerber-secret
+    ports:
+      - "9000:9000"   # S3 API — на этот порт ходят и админка, и браузер
+      - "9001:9001"   # веб-консоль MinIO
+    volumes:
+      - dev-minio:/data
+
+  minio-init:
+    image: quay.io/minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 cerber cerber-secret; do sleep 1; done;
+      mc mb -p local/cerber || true;
+      exit 0"
+
+  # --- фейковая камера: MediaMTX раздаёт RTSP, ffmpeg публикует тест-картинку ---
+
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    ports:
+      - "8554:8554"   # можно открыть поток в VLC: rtsp://localhost:8554/cam_main
+
+  cam-main:
+    image: linuxserver/ffmpeg
+    restart: unless-stopped
+    depends_on:
+      - mediamtx
+    command: >
+      -re -f lavfi -i testsrc2=size=1280x720:rate=15
+      -c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p
+      -g 30 -b:v 2M
+      -f rtsp -rtsp_transport tcp rtsp://mediamtx:8554/cam_main
+
+  cam-sub:
+    image: linuxserver/ffmpeg
+    restart: unless-stopped
+    depends_on:
+      - mediamtx
+    command: >
+      -re -f lavfi -i testsrc2=size=640x360:rate=5
+      -c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p
+      -g 10 -b:v 400k
+      -f rtsp -rtsp_transport tcp rtsp://mediamtx:8554/cam_sub
+
+  # --- сам продукт ---
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    ports:
+      - "8090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://cerber:cerber@postgres:5432/cerber
+      SECRET_KEY: dev-secret-not-for-prod
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
+      AGENT_TOKEN: dev-agent-token
+      # затравка конфига при первом старте (потом всё меняется в UI)
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_PUBLIC_URL: http://localhost:9000
+      S3_BUCKET: cerber
+      S3_ACCESS_KEY: cerber
+      S3_SECRET_KEY: cerber-secret
+      S3_FORCE_PATH_STYLE: "true"
+      CAMERA_RTSP_MAIN: rtsp://mediamtx:8554/cam_main
+      CAMERA_RTSP_SUB: rtsp://mediamtx:8554/cam_sub
+
+  agent:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - admin
+      - mediamtx
+    environment:
+      ADMIN_URL: http://admin:8080
+      AGENT_TOKEN: dev-agent-token
+    volumes:
+      - dev-agent:/data
+
+volumes:
+  dev-pg:
+  dev-minio:
+  dev-agent:

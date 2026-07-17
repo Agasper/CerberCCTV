@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Настройки — Cerber{% endblock %}
+{% block content %}
+{% if msg %}<div class="alert alert-ok">{{ msg }}</div>{% endif %}
+{% if err %}<div class="alert alert-error">{{ err }}</div>{% endif %}
+{% if new_token %}
+<div class="alert alert-warn token-box">
+  Новый токен агента (задайте его в <code>.env</code> агента как <code>AGENT_TOKEN</code>):
+  <code class="token">{{ new_token }}</code>
+</div>
+{% endif %}
+<div class="muted small" style="margin-bottom:1rem">Версия конфигурации: {{ version }} — агент подхватывает изменения автоматически.</div>
+
+<div class="grid-2">
+  <form class="card" method="post" action="/settings/camera">
+    <h2>Камера</h2>
+    <label>RTSP основной поток (запись)
+      <input name="rtsp_main" value="{{ cfg.agent.camera.rtsp_main }}"
+             placeholder="rtsp://admin:пароль@192.168.0.10:554/Streaming/Channels/101">
+    </label>
+    <label>RTSP субпоток (детекция движения)
+      <input name="rtsp_sub" value="{{ cfg.agent.camera.rtsp_sub }}"
+             placeholder="rtsp://admin:пароль@192.168.0.10:554/Streaming/Channels/102">
+    </label>
+    <label>Интервал снапшотов, сек
+      <input type="number" name="snapshot_interval_s" min="5" max="3600"
+             value="{{ cfg.agent.camera.snapshot_interval_s }}">
+    </label>
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+  </form>
+
+  <form class="card" method="post" action="/settings/motion">
+    <h2>Детекция движения</h2>
+    <label class="checkbox">
+      <input type="checkbox" name="enabled" {{ 'checked' if cfg.agent.motion.enabled }}> Включена
+    </label>
+    <div class="grid-fields">
+      <label>Анализ, кадров/с
+        <input type="number" step="0.5" min="0.5" max="15" name="process_fps" value="{{ cfg.agent.motion.process_fps }}">
+      </label>
+      <label>Чувствительность (меньше — чувствительнее)
+        <input type="number" min="4" max="200" name="sensitivity" value="{{ cfg.agent.motion.sensitivity }}">
+      </label>
+      <label>Мин. площадь движения, % кадра
+        <input type="number" step="0.05" min="0.01" max="50" name="min_area_pct" value="{{ cfg.agent.motion.min_area_pct }}">
+      </label>
+      <label>Кадров подряд для старта
+        <input type="number" min="1" max="50" name="min_consecutive_frames" value="{{ cfg.agent.motion.min_consecutive_frames }}">
+      </label>
+      <label>Пре-ролл, сек
+        <input type="number" min="0" max="60" name="pre_roll_s" value="{{ cfg.agent.motion.pre_roll_s }}">
+      </label>
+      <label>Пост-ролл, сек
+        <input type="number" min="1" max="120" name="post_roll_s" value="{{ cfg.agent.motion.post_roll_s }}">
+      </label>
+      <label>Пауза между событиями, сек
+        <input type="number" min="0" max="600" name="cooldown_s" value="{{ cfg.agent.motion.cooldown_s }}">
+      </label>
+      <label>Макс. длина клипа, сек
+        <input type="number" min="10" max="900" name="max_clip_s" value="{{ cfg.agent.motion.max_clip_s }}">
+      </label>
+    </div>
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+  </form>
+
+  <form class="card" method="post" action="/settings/storage">
+    <h2>S3-хранилище</h2>
+    <label>Endpoint URL (пусто — AWS S3)
+      <input name="endpoint_url" value="{{ cfg.s3.endpoint_url }}"
+             placeholder="https://fra1.digitaloceanspaces.com">
+    </label>
+    <label>Публичный URL для ссылок (если отличается)
+      <input name="public_url" value="{{ cfg.s3.public_url }}" placeholder="обычно пусто">
+    </label>
+    <div class="grid-fields">
+      <label>Регион <input name="region" value="{{ cfg.s3.region }}" placeholder="fra1"></label>
+      <label>Bucket <input name="bucket" value="{{ cfg.s3.bucket }}"></label>
+      <label>Access key <input name="access_key" value="{{ cfg.s3.access_key }}"></label>
+      <label>Secret key
+        <input type="password" name="secret_key" value=""
+               placeholder="{{ 'сохранён — пусто = не менять' if cfg.s3.secret_key else 'не задан' }}">
+      </label>
+      <label>Префикс ключей <input name="prefix" value="{{ cfg.s3.prefix }}"></label>
+      <label>TTL ссылок, сек
+        <input type="number" min="60" max="604800" name="presign_ttl_s" value="{{ cfg.s3.presign_ttl_s }}">
+      </label>
+    </div>
+    <label class="checkbox">
+      <input type="checkbox" name="force_path_style" {{ 'checked' if cfg.s3.force_path_style }}>
+      Path-style адресация (нужно для MinIO)
+    </label>
+    <div class="btn-row">
+      <button class="btn btn-primary" type="submit">Сохранить</button>
+      <button class="btn" type="submit" formaction="/settings/s3-test">Проверить подключение</button>
+    </div>
+  </form>
+
+  <form class="card" method="post" action="/settings/retention">
+    <h2>Хранение записей</h2>
+    <label class="checkbox">
+      <input type="checkbox" name="enabled" {{ 'checked' if cfg.retention.enabled }}>
+      Автоматически удалять старые события
+    </label>
+    <label>Хранить, дней
+      <input type="number" min="1" max="3650" name="days" value="{{ cfg.retention.days }}">
+    </label>
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+  </form>
+
+  <div class="card">
+    <h2>Агент</h2>
+    {% if agent %}
+    <div class="kv">
+      <div>Имя</div><div>{{ agent.name }}</div>
+      <div>Был на связи</div><div>{{ agent.last_seen | dt }}</div>
+      <div>Токен</div><div>{{ 'выпущен' if agent.token_hash else 'не выпущен' }}</div>
+    </div>
+    {% endif %}
+    <form method="post" action="/settings/agent-token"
+          data-confirm="Перевыпустить токен? Старый перестанет работать, его нужно будет обновить на Raspberry Pi.">
+      <button class="btn" type="submit">Перевыпустить токен агента</button>
+    </form>
+  </div>
+
+  <form class="card" method="post" action="/settings/password">
+    <h2>Смена пароля</h2>
+    <label>Текущий пароль <input type="password" name="current_password" autocomplete="current-password" required></label>
+    <label>Новый пароль <input type="password" name="new_password" autocomplete="new-password" required minlength="8"></label>
+    <label>Ещё раз <input type="password" name="confirm_password" autocomplete="new-password" required minlength="8"></label>
+    <button class="btn btn-primary" type="submit">Сменить пароль</button>
+  </form>
+</div>
+{% endblock %}

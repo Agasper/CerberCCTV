@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Дашборд — Cerber{% endblock %}
+{% block body_attrs %} data-page="dashboard"{% endblock %}
+{% block content %}
+{% for hint in hints %}
+<div class="alert alert-warn">{{ hint }}</div>
+{% endfor %}
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head">
+      <h2>Камера</h2>
+      <a class="btn btn-primary btn-sm" href="/live">▶ Live</a>
+    </div>
+    {% if has_snapshot %}
+      <img id="snapshot" class="snapshot" src="/snapshot.jpg" alt="Последний снапшот камеры">
+      <div class="muted small">Снапшот обновляется автоматически.</div>
+    {% else %}
+      <div class="placeholder">Снапшотов пока нет — агент пришлёт первый кадр после подключения.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Агент</h2>
+    {% if agent %}
+      <div class="kv">
+        <div>Имя</div><div>{{ agent.name }}</div>
+        <div>Статус</div>
+        <div>
+          {% if online %}<span class="badge badge-ok">онлайн</span>
+          {% else %}<span class="badge badge-err">офлайн</span>{% endif %}
+        </div>
+        <div>Был на связи</div><div>{{ agent.last_seen | dt }}</div>
+        {% if agent.status %}
+        <div>Захват потока</div>
+        <div>{{ '✅ работает' if agent.status.capture_ok else '⚠️ нет данных' }}</div>
+        <div>Детекция</div>
+        <div>{{ '✅ работает (%.1f fps)' % agent.status.motion_fps if agent.status.motion_ok else '⚠️ не работает' }}</div>
+        <div>Очередь загрузки</div>
+        <div>{{ agent.status.outbox_events }} соб. ({{ agent.status.outbox_bytes | filesize }})</div>
+        <div>Свободно на диске</div><div>{{ agent.status.disk_free_mb }} МБ</div>
+        <div>Последнее движение</div><div>{{ agent.status.last_motion_at | default('—', true) }}</div>
+        <div>Версия конфига</div><div>{{ agent.status.config_version }}</div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="placeholder">Агент ещё не зарегистрирован.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Последние события</h2>
+    <a class="btn btn-sm" href="/events">Все события</a>
+  </div>
+  {% if recent %}
+  <div class="events-grid">
+    {% for e in recent %}
+      {% include "_event_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="placeholder">Событий пока нет.</div>
+  {% endif %}
+</div>
+{% endblock %}
