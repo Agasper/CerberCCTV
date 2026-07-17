@@ -105,7 +105,12 @@
         else if (msg.type === 'stream') initPlayer(msg.mime);
         else if (msg.type === 'ended') { setStatus('поток прерван, ждём…'); teardownPlayer(); }
       } else {
+        // Нет плеера (браузер без MSE) — не копим фрагменты в памяти
+        if (!mediaSource) return;
         queue.push(new Uint8Array(ev.data));
+        // Страховка от зависшего SourceBuffer: каждый фрагмент начинается
+        // с keyframe, поэтому сброс старых безопасен для декодера
+        while (queue.length > 50) queue.shift();
         pump();
       }
     };
