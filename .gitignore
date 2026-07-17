@@ -8,3 +8,4 @@ venv/
 data/
 dev/out/
 deploy.sh
+.claude/
