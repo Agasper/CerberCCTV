@@ -166,8 +166,10 @@ appear neither in the repository nor on the Pi's disk.
 - Live view on iPhone: Safari supports MSE starting with iOS 17.1
   (ManagedMediaSource); on older iOS live view won't work (recordings will).
   Not verified on a real device.
-- Audio: preserved in clips if the camera outputs AAC; intentionally disabled
-  in live view (simplicity and bandwidth).
+- Audio: transcoded to AAC while recording into the ring buffer (IP cameras
+  usually output G.711, which neither MP4 nor browsers can play; the transcode
+  costs ~1-2% CPU), so clips carry sound with any camera. Intentionally
+  disabled in live view (simplicity and bandwidth).
 - The exact request body size limit of the App Platform ingress is not
   documented — that's why uploads go in 8 MiB chunks.
 - Verified end-to-end in the local dev environment (fake camera + MinIO +

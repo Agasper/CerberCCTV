@@ -105,7 +105,13 @@ class CaptureManager:
             "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "warning",
             "-rtsp_transport", "tcp", "-timeout", "10000000",
             "-i", url,
-            "-map", "0", "-c", "copy",
+            "-map", "0:v", "-map", "0:a?",
+            "-c:v", "copy",
+            # Камеры обычно отдают звук в G.711 (pcm_mulaw/alaw) — в mpegts он
+            # превращается в нечитаемый приватный поток, а в mp4/браузер не
+            # попадает вовсе. Кодируем в AAC сразу при записи: 8 кГц моно —
+            # это ~1-2% CPU, зато клипы получают нормальный звук простой копией.
+            "-c:a", "aac", "-b:a", "48k",
             "-f", "segment",
             "-segment_time", str(seg_s),
             "-reset_timestamps", "1",

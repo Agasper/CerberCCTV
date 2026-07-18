@@ -160,10 +160,15 @@ class EventRecorder:
             "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
             "-f", "concat", "-safe", "0", "-i", str(list_path),
         ]
-        # Сначала пробуем сохранить и звук (AAC в mpegts требует bitstream-фильтр
-        # при переносе в mp4); если звук в экзотическом кодеке — повторяем без него
+        # Три попытки по нисходящей:
+        #  1) всё stream copy — камеры с AAC (bitstream-фильтр нужен для переноса
+        #     ADTS-заголовков из mpegts в mp4);
+        #  2) видео копией, звук перекодировать в AAC — камеры с G.711
+        #     (pcm_mulaw/alaw в mp4 не кладётся и браузером не играется);
+        #  3) совсем без звука.
         attempts = [
             base + ["-c", "copy", "-bsf:a", "aac_adtstoasc", "-movflags", "+faststart", str(out_path)],
+            base + ["-c:v", "copy", "-c:a", "aac", "-b:a", "48k", "-movflags", "+faststart", str(out_path)],
             base + ["-c:v", "copy", "-an", "-movflags", "+faststart", str(out_path)],
         ]
         last_error = b""
