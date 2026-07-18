@@ -61,7 +61,11 @@ class LiveStreamer:
                         "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
                         "-rtsp_transport", "tcp", "-timeout", "10000000",
                         "-i", url,
-                        "-an", "-c:v", "copy",
+                        "-map", "0:v", "-map", "0:a?",
+                        "-c:v", "copy",
+                        # Звук камеры (обычно G.711) сразу в AAC — иначе его
+                        # не положить в fMP4 и не сыграть в браузере
+                        "-c:a", "aac", "-b:a", "48k",
                         "-f", "mp4",
                         "-movflags", "empty_moov+default_base_moof+frag_keyframe",
                         "pipe:1",

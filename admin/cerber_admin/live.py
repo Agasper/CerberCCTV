@@ -32,16 +32,19 @@ def guess_mime(init_segment: bytes) -> str:
     Для H.264 профиль/уровень лежат в боксе avcC сразу после fourcc:
     [version][profile][compat][level]. Для H.265 точную строку собрать
     сложнее — отдаём типовую, современные браузеры обычно принимают.
+    Если в init есть аудиодорожка (бокс mp4a, агент кодирует звук в
+    AAC-LC), она обязана попасть в codecs — иначе MSE отвергнет поток.
     """
+    audio = ", mp4a.40.2" if b"mp4a" in init_segment else ""
     i = init_segment.find(b"avcC")
     if i != -1 and len(init_segment) >= i + 8:
         profile = init_segment[i + 5]
         compat = init_segment[i + 6]
         level = init_segment[i + 7]
-        return f'video/mp4; codecs="avc1.{profile:02X}{compat:02X}{level:02X}"'
+        return f'video/mp4; codecs="avc1.{profile:02X}{compat:02X}{level:02X}{audio}"'
     if b"hvcC" in init_segment:
-        return 'video/mp4; codecs="hvc1.1.6.L120.90"'
-    return 'video/mp4; codecs="avc1.42E01E"'
+        return f'video/mp4; codecs="hvc1.1.6.L120.90{audio}"'
+    return f'video/mp4; codecs="avc1.42E01E{audio}"'
 
 
 def is_init_segment(data: bytes) -> bool:
