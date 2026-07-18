@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26333f"/>
+      <stop offset="1" stop-color="#121920"/>
+    </linearGradient>
+    <radialGradient id="lens" cx="0.38" cy="0.35" r="0.9">
+      <stop offset="0" stop-color="#57d1a5"/>
+      <stop offset="0.55" stop-color="#2f8f6e"/>
+      <stop offset="1" stop-color="#1d5c47"/>
+    </radialGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141b22"/>
+      <stop offset="1" stop-color="#0c1116"/>
+    </linearGradient>
+  </defs>
+  <!-- фон плитки (полный, для maskable-иконок) -->
+  <rect width="64" height="64" fill="url(#bg)"/>
+  <!-- щит с объективом, уменьшенный в безопасную зону -->
+  <g transform="translate(32 32) scale(0.66) translate(-32 -32)">
+    <path d="M32 3 L56 11 V30 C56 46.5 45.5 57.6 32 61.5 C18.5 57.6 8 46.5 8 30 V11 Z"
+          fill="url(#shield)" stroke="#3fb68b" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="32" cy="29.5" r="14" fill="#0b1015" stroke="#3fb68b" stroke-width="2.4"/>
+    <circle cx="32" cy="29.5" r="8.2" fill="url(#lens)"/>
+    <circle cx="32" cy="29.5" r="3.4" fill="#0b1015"/>
+    <circle cx="35.8" cy="25.6" r="2" fill="#e8fbf3" opacity="0.9"/>
+    <circle cx="45.5" cy="47.5" r="3" fill="#e5534b"/>
+  </g>
+</svg>

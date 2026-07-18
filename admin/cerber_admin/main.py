@@ -95,3 +95,14 @@ async def not_authenticated_handler(request: Request, exc: NotAuthenticated):
 @app.get("/healthz")
 async def healthz():
     return {"ok": True}
+
+
+@app.get("/sw.js")
+async def service_worker():
+    # Service worker обязан отдаваться с корня — иначе его scope
+    # ограничится /static/ и PWA не установится
+    from fastapi.responses import FileResponse
+
+    return FileResponse(
+        Path(__file__).parent / "static" / "sw.js", media_type="application/javascript"
+    )

@@ -1,6 +1,11 @@
 // Общая логика интерфейса: локальное время, тултипы, вкладки настроек,
 // фильтр событий, подтверждения форм, автообновление дашборда.
 
+// PWA: регистрация service worker (нужен для установки на телефон)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => { /* не критично */ });
+}
+
 // --- Время: сервер отдаёт UTC в <time datetime>, показываем локальное ---
 const dtFormat = new Intl.DateTimeFormat(undefined, {
   day: '2-digit', month: '2-digit', year: 'numeric',
