@@ -74,9 +74,16 @@ class LiveStreamer:
                         limit=STREAM_LIMIT,
                     )
                     log.info("Live-трансляция запущена")
-                    await asyncio.wait_for(
-                        self._pump(proc.stdout, ws), timeout=max_duration
-                    )
+                    # aiohttp обрабатывает ping/pong только внутри receive():
+                    # если сокет не читать, heartbeat не видит понгов и рвёт
+                    # соединение через 2 интервала (ровно те самые ~40 секунд)
+                    drain = asyncio.create_task(self._drain(ws))
+                    try:
+                        await asyncio.wait_for(
+                            self._pump(proc.stdout, ws), timeout=max_duration
+                        )
+                    finally:
+                        drain.cancel()
         except asyncio.TimeoutError:
             log.info("Live-трансляция остановлена по таймауту %d с", max_duration)
         except asyncio.CancelledError:
@@ -89,6 +96,19 @@ class LiveStreamer:
                 proc.kill()
                 with contextlib.suppress(Exception):
                     await proc.wait()
+
+    @staticmethod
+    async def _drain(ws) -> None:
+        """Вычитывает входящие кадры (pong/close), ничего не ожидая по сути."""
+        with contextlib.suppress(Exception):
+            while True:
+                msg = await ws.receive()
+                if msg.type in (
+                    aiohttp.WSMsgType.CLOSED,
+                    aiohttp.WSMsgType.CLOSING,
+                    aiohttp.WSMsgType.ERROR,
+                ):
+                    break
 
     async def _pump(self, stream: asyncio.StreamReader, ws) -> None:
         pending: list[bytes] = []
